@@ -121,7 +121,7 @@ success: function(data) {
         singleside.addData(data);
     });
 }
-}).error(function() {});
+});
 
 var doubleside = new L.geoJson();
 doubleside.addTo(map);
@@ -133,7 +133,8 @@ success: function(data) {
     $(data.features).each(function(key, data) {
         doubleside.addData(data);
     });
-}).error(function() {});
+}
+});
   </script>
 </body>
 </html>
