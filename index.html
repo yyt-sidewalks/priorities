@@ -122,7 +122,7 @@ singleside.addTo(map);
 
 $.ajax({
 dataType: "json",
-url: "data/singleside.geojson",
+url: "data/singleside.json",
 success: function(data) {
     $(data.features).each(function(key, data) {
         singleside.addData(data);
@@ -135,7 +135,7 @@ doubleside.addTo(map);
 
 $.ajax({
 dataType: "json",
-url: "data/doubleside.geojson",
+url: "data/doubleside.json",
 success: function(data) {
     $(data.features).each(function(key, data) {
         doubleside.addData(data);
