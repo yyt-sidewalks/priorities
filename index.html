@@ -12,11 +12,10 @@
   <!--Bootstrap for form-->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
   <!--leaflet-->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
   <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,900' rel='stylesheet' type='text/css'>
-
   <script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
   <style>
     *{font-family: 'Source Sans Pro', sans-serif;}
@@ -77,6 +76,30 @@
 		#blurb p {display:block;}
 		#blurb #showabout{ display:none;}
 	}
+	#legend{
+		background:#fff;
+		padding: 0.5em;
+	}
+	#legend li{
+		list-style:none;
+		margin:0;
+		padding: 0;
+	}
+	#legend .legendbox{
+		display:inline-block;
+		height: 18px;
+		width: 18px;
+		margin-right: 1em;
+	}
+	img.leaflet-tile.leaflet-tile-loaded {
+		filter: grayscale(100%);
+	}
+	.datatoggle{
+		display:inline-block;
+		float:right;
+		color: #aeaeae;
+		cursor:pointer;
+	}
   </style>
 </head>
 
@@ -89,9 +112,21 @@
 	<h3>Sidewalk Clearing Priorities of the City of St John's, NL</h3>
 	<p id="showabout" class="mobileshow">about</p>
   <p class="mobilehide">This map shows how the City of St. John's prioritizes sidewalk clearing during winter snow storms.</p>
+  <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span><br><ul id="legend"></ul></p>
+  <p class="mobilehide"><strong>Census Data</strong><br><select id="censusdata">
+  <option value="">Select</option>
+  <option value="percentages.walked.all">Percentage Walked</option>
+  <option value="percentages.transit.all">Percentage Public Transit</option>
+  <option value="income.all">By Income</option></select><br>
+  <button id="resetareas">Reset</button></p>
     </div>
 </div>
   <script>
+  var censusdata;
+	var censusareas={};
+	var prioritytoggle = false,layertoggles={};
+	var gradient=["#168900","#2c7c00","#416f00","#576200","#6d5500","#834900","#993c00","#af2f00","#c42200","#da1500"];
+	var alllayers={},prioritylayers={};
   $('#showabout').click(function(){
 	  if($('#showabout').hasClass('on')){
 		  $('#showabout').removeClass('on').text('about');
@@ -101,41 +136,177 @@
 		  $('.mobilehide').show();
 	  }
   });
-  var map = L.map('map', {
-    zoom: 19
-}); //Initialize the map
-
+    var map = L.map('map').setView([47.5670, -52.7292], 14); //Initialize the map
+	
     //Add a basemap
     var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     	attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
-
-	  /*
-var singleside = new L.geoJson();
-singleside.addTo(map);
-
-$.ajax({
-dataType: "json",
-url: "data/singleside.json",
-success: function(data) {
-    $(data.features).each(function(key, data) {
-        singleside.addData(data);
-    });
-}
-});
-
-var doubleside = new L.geoJson();
-doubleside.addTo(map);
-
-$.ajax({
-dataType: "json",
-url: "data/doubleside.json",
-success: function(data) {
-    $(data.features).each(function(key, data) {
-        doubleside.addData(data);
-    });
-}
-});*/
+	
+	$.ajax({
+		dataType: "json",
+		url: "data/demographics.json",
+		success: function(data) {
+			censusdata=data;
+			buildcensusdata();
+		}
+	});
+	var censuslayer = new L.geoJson(null,{
+		style: function(geoJsonFeature){
+			return {fillColor: 'transparent', color:'none', weight: '0', fillOpacity: 0.2}
+		},
+		onEachFeature: function(feature, layer){
+			censusareas[feature.properties.id] = layer;
+		}
+	});
+	censuslayer.addTo(map);
+	alllayers['census']=censuslayer;
+	layertoggles['census']=false;
+	$.ajax({
+		dataType: "json",
+		url: "data/censuszones.json",
+		success: function(data) {
+			$(data.features).each(function(key, data) {
+				censuslayer.addData(data);
+			});
+		}
+	});
+	var priorities={"school_zones":{"colour":"#f2ff00","size":"24","opacity":"0.6","legend": "School Zones"},"singleside":{"colour":"#3c00ff","size":"14","opacity":"0.4","legend": "Single Side Cleared"},"doubleside":{"colour":"#ff8000","size":"14","opacity":"0.4","legend": "Both Sizes Cleared"},"priority_3":{"colour":"#42ff65","size":"4","opacity":"1","legend": "Priority 3"},"priority_2":{"colour":"#02e2f2","size":"4","opacity":"1","legend": "Priority 2"},"priority_1":{"colour":"#ff4545","size":"4","opacity":"1","legend": "Priority 1"}};
+	
+	$.each(priorities,function(k,v){
+		var thislayer = new L.geoJson(null,{
+			style: function(){
+				return {color: v.colour, opacity: v.opacity, weight: v.size}
+			}
+		});
+		thislayer.addTo(map);
+		$('#legend').append('<li><span class="legendbox" style="background:'+v.colour+';opacity:'+v.opacity+'">&nbsp;</span><strong>'+v.legend+'</strong><span id="'+k+'ctl" class="datatoggle" data-layer="'+k+'">hide</span></li>');
+		$.ajax({
+			dataType: "json",
+			url: "data/"+k+".json",
+			success: function(data) {
+				$(data.features).each(function(key, data) {
+					thislayer.addData(data);
+				});
+			}
+		});
+		alllayers[k]=thislayer;
+		prioritylayers[k]=thislayer;
+		layertoggles[k]=false;
+	});
+	$('#censusdata').change(function(){
+		updateareas($(this).val());
+	});
+	$('#resetareas').click(function(){
+		$('#censusdata').val('');
+		resetareas();
+	});
+	$('.datatoggle').click(function(){
+		togglelayers($(this).data('layer'));
+	});
+	function buildcensusdata(){
+		$.each(censusdata,function(k,v){
+			censusdata[k].percentages={};
+			censusdata[k].percentages.walked={};
+			if(parseInt(v.Data.v_CA16_5792.value)){
+				censusdata[k].percentages.walked.all=parseInt(v.Data.v_CA16_5804.value)/parseInt(v.Data.v_CA16_5792.value);
+			}else{
+				censusdata[k].percentages.walked.all=0;
+			}
+			if(parseInt(v.Data.v_CA16_5794.value)){
+				censusdata[k].percentages.walked.female=parseInt(v.Data.v_CA16_5806.value)/parseInt(v.Data.v_CA16_5794.value);
+			}else{
+				censusdata[k].percentages.walked.female=0;
+			}
+			if(parseInt(v.Data.v_CA16_5793.value)){
+				censusdata[k].percentages.walked.male=parseInt(v.Data.v_CA16_5805.value)/parseInt(v.Data.v_CA16_5793.value);
+			}else{
+				censusdata[k].percentages.walked.male=0;
+			}
+			censusdata[k].percentages.transit={};
+			if(parseInt(v.Data.v_CA16_5792.value)){
+				censusdata[k].percentages.transit.all=parseInt(v.Data.v_CA16_5801.value)/parseInt(v.Data.v_CA16_5792.value);
+			}else{
+				censusdata[k].percentages.transit.all=0;
+			}
+			if(parseInt(v.Data.v_CA16_5794.value)){
+				censusdata[k].percentages.transit.female=parseInt(v.Data.v_CA16_5803.value)/parseInt(v.Data.v_CA16_5794.value);
+			}else{
+				censusdata[k].percentages.transit.female=0;
+			}
+			if(parseInt(v.Data.v_CA16_5793.value)){
+				censusdata[k].percentages.transit.male=parseInt(v.Data.v_CA16_5802.value)/parseInt(v.Data.v_CA16_5793.value);
+			}else{
+				censusdata[k].percentages.transit.male=0;
+			}
+		});
+	}
+	function updateareas(e){
+		resetareas();
+		switch(e){
+			case "percentages.walked.all":
+				$.each(censusdata,function(k,v){
+					var rounded=Math.ceil(Math.round(v.percentages.walked.all*100)/10);
+					var opacity=(Math.round(v.percentages.walked.all*10)/10)*1.75;
+					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
+				});
+			break;
+			case"percentages.transit.all":
+				$.each(censusdata,function(k,v){
+					var rounded=Math.ceil(Math.round(v.percentages.transit.all*100)/10);
+					var opacity=(Math.round(v.percentages.transit.all*10)/10)*1.75;
+					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
+				});
+			break;
+			case"income.all":
+				$.each(censusdata,function(k,v){
+					var rounded=Math.ceil(Math.round(v.percentages.walked.all*100)/10);
+					var opacity=(Math.round(v.percentages.walked.all*10)/10)*1.75;
+					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
+				});
+			break;
+		}
+	}
+	function resetareas(){
+		$.each(censusareas,function(k,v){
+			censusareas[k].setStyle({fillColor: 'transparent', color:'none', weight: '0', fillOpacity: 0.2});
+		});
+	}
+	function togglelayers(l) {
+		if(l=="priorities"){
+			if(!prioritytoggle){
+				$.each(layertoggles,function(k,v){
+				console.log(k);
+				console.log(v);
+					if(!v && k!='census'){
+						map.removeLayer(prioritylayers[k]);
+						layertoggles[k] = !layertoggles[k];
+						$('#'+k+'ctl').text('show');
+					}
+				});
+				$('#prioritiesctl').text('show');
+			} else {
+				$.each(layertoggles,function(k,v){
+					if(v && k!='census'){
+						map.addLayer(prioritylayers[k]);
+						layertoggles[k] = !layertoggles[k];
+						$('#'+k+'ctl').text('hide');
+					}
+				});
+				$('#prioritiesctl').text('hide');
+			}
+			prioritytoggle = !prioritytoggle;
+		}else{
+			if(!layertoggles[l]){
+				map.removeLayer(alllayers[l]);
+				$('#'+l+'ctl').text('show');
+			} else {
+				map.addLayer(alllayers[l]);
+				$('#'+l+'ctl').text('hide');
+			}
+			layertoggles[l] = !layertoggles[l];
+		}
+	}
   </script>
 </body>
 </html>
