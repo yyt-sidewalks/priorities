@@ -205,6 +205,20 @@
 		togglelayers($(this).data('layer'));
 	});
 	function buildcensusdata(){
+		censusdata.averages={};
+		censusdata.totals={};
+		censusdata.values={};
+		censusdata.max={};
+		censusdata.min={};
+		censusdata.totals.afterTaxIncome=0;
+		censusdata.values.afterTaxIncome=[];
+		censusdata.max.afterTaxIncome=0;
+		censusdata.min.afterTaxIncome=0;
+		censusdata.ranges={};
+		censusdata.ranges.afterTaxIncome=[0];
+		censusdata.tiers={};
+		censusdata.tiers.afterTaxIncome=0;
+		var hasAfterTaxIncome=0;
 		$.each(censusdata,function(k,v){
 			censusdata[k].percentages={};
 			censusdata[k].percentages.walked={};
@@ -239,6 +253,23 @@
 			}else{
 				censusdata[k].percentages.transit.male=0;
 			}
+			if(parseInt(v.Data.v_CA16_4963.value)!==false){
+				censusdata.totals.afterTaxIncome=censusdata.totals.afterTaxIncome+parseInt(v.Data.v_CA16_4963.value);
+				hasAfterTaxIncome++;
+				censusdata.values.afterTaxIncome.push(parseInt(v.Data.v_CA16_4963.value));
+			}
+		});
+		censusdata.averages.afterTaxIncome=Math.ceil(censusdata.totals.afterTaxIncome/hasAfterTaxIncome);
+		censusdata.max.afterTaxIncome=Math.max.apply(Math,censusdata.values.afterTaxIncome);
+		censusdata.min.afterTaxIncome=Math.min.apply(Math,censusdata.values.afterTaxIncome);
+		censusdata.tiers.afterTaxIncome=Math.ceil(censusdata.max.afterTaxIncome/gradient.length);
+		//calculate tiers for gradients
+		$.each(gradient,function(k,v){
+			if(k){
+				var lastkey=k-1;
+				var thisrange=censusdata.tiers.afterTaxIncome+censusdata.ranges.afterTaxIncome[lastkey];
+				censusdata.ranges.afterTaxIncome.push(thisrange);
+			}
 		});
 	}
 	function updateareas(e){
@@ -260,8 +291,8 @@
 			break;
 			case"income.all":
 				$.each(censusdata,function(k,v){
-					var rounded=Math.ceil(Math.round(v.percentages.walked.all*100)/10);
-					var opacity=(Math.round(v.percentages.walked.all*10)/10)*1.75;
+					var rounded=Math.round(v.Data.v_CA16_4963.value/censusdata.tiers.afterTaxIncome);
+					var opacity=0.8;
 					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
 				});
 			break;
