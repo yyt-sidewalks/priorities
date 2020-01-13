@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Sidewalk Priorities of the City of St John's, NL & 2016 Census Data</title>
+  <title>Sidewalk Obstructions in St John's, NL</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta property="og:title" content="Sidewalk Priorities from the City of St John's, NL" />
   <meta property="og:type" content="website" />
@@ -76,16 +76,22 @@
 		#blurb p {display:block;}
 		#blurb #showabout{ display:none;}
 	}
-	#legend{
+	.legend{
 		background:#fff;
 		padding: 0.5em;
 	}
-	#legend li{
+	.legend li{
 		list-style:none;
 		margin:0;
 		padding: 0;
 	}
-	#legend .legendbox{
+	.legend li img{
+		display:inline-block;
+		height: 18px;
+		width: 18px;
+		margin-right: 1em;
+	}
+	.legend .legendbox{
 		display:inline-block;
 		height: 18px;
 		width: 18px;
@@ -100,6 +106,10 @@
 		color: #aeaeae;
 		cursor:pointer;
 	}
+	#censusdata{
+		width: 100%;
+		margin-bottom: 0.2em;
+	}
   </style>
 </head>
 
@@ -112,19 +122,24 @@
 	<h3>Sidewalk Clearing Priorities of the City of St John's, NL</h3>
 	<p id="showabout" class="mobileshow">about</p>
   <p class="mobilehide">This map shows how the City of St. John's prioritizes sidewalk clearing during winter snow storms.</p>
-  <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span><br><ul id="legend"></ul></p>
+  <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span><br><ul id="prioritieslegend" class="legend"></ul></p>
+  <p class="mobilehide"><strong>Hospitals & Schools</strong> <span id="centresctl" class="datatoggle" data-layer="centres">hide</span><br><ul id="centreslegend" class="legend">
+  <li><img src="img/hospital.png"><strong>Hospitals</strong><span id="hospitalsctl" class="datatoggle" data-layer="hospitals">hide</span></li>
+  <li><img src="img/school.png"><strong>Schools</strong><span id="schoolsctl" class="datatoggle" data-layer="schools">hide</span></li>
+  </ul></p>
   <p class="mobilehide"><strong>Census Data</strong><br><select id="censusdata">
-  <option value="">Select</option>
+  <option value="">Select Census Variable</option>
   <option value="percentages.walked.all">Percentage Walked</option>
   <option value="percentages.transit.all">Percentage Public Transit</option>
-  <option value="income.all">By Income</option></select><br>
+  <option value="income.all">After-Tax Income</option>
+  <option value="population.density">Population Density</option></select><br>
   <button id="resetareas">Reset</button></p>
     </div>
 </div>
   <script>
   var censusdata;
 	var censusareas={};
-	var prioritytoggle = false,layertoggles={};
+	var prioritytoggle = false,layertoggles={},centretoggle=false;
 	var gradient=["#168900","#2c7c00","#416f00","#576200","#6d5500","#834900","#993c00","#af2f00","#c42200","#da1500"];
 	var alllayers={},prioritylayers={};
   $('#showabout').click(function(){
@@ -171,6 +186,66 @@
 			});
 		}
 	});
+	var schoolicon = new L.Icon({
+		iconSize: [27, 27],
+		iconAnchor: [13, 27],
+		popupAnchor:  [1, -24],
+		iconUrl: 'img/school.png'
+	});
+	var schoollayer = new L.geoJson(null,{
+		style: function(feature){
+			if(feature.geometry.type === 'Polygon') {
+				return {fillColor: '#cc9a10', color:'none', weight: '0', fillOpacity: 0.3}
+			}
+		},
+		pointToLayer: function(feature, latlng) {
+			if(feature.geometry.type === 'Point') {
+				return L.marker(latlng, {icon: schoolicon});
+			}
+        }
+	});
+	schoollayer.addTo(map);
+	alllayers['schools']=schoollayer;
+	layertoggles['schools']=false;
+	$.ajax({
+		dataType: "json",
+		url: "data/schools.json",
+		success: function(data) {
+			$(data.features).each(function(key, data) {
+				schoollayer.addData(data);
+			});
+		}
+	});
+	var hospitalicon = new L.Icon({
+		iconSize: [27, 27],
+		iconAnchor: [13, 27],
+		popupAnchor:  [1, -24],
+		iconUrl: 'img/hospital.png'
+	});
+	var hospitallayer = new L.geoJson(null,{
+		style: function(feature){
+			if(feature.geometry.type === 'Polygon') {
+				return {fillColor: '#0a7ed1', color:'none', weight: '0', fillOpacity: 0.3}
+			}
+		},
+		pointToLayer: function(feature, latlng) {
+			if(feature.geometry.type === 'Point') {
+				return L.marker(latlng, {icon: hospitalicon});
+			}
+        }
+	});
+	hospitallayer.addTo(map);
+	alllayers['hospitals']=hospitallayer;
+	layertoggles['hospitals']=false;
+	$.ajax({
+		dataType: "json",
+		url: "data/hospitals.json",
+		success: function(data) {
+			$(data.features).each(function(key, data) {
+				hospitallayer.addData(data);
+			});
+		}
+	});
 	var priorities={"school_zones":{"colour":"#f2ff00","size":"24","opacity":"0.6","legend": "School Zones"},"singleside":{"colour":"#3c00ff","size":"14","opacity":"0.4","legend": "Single Side Cleared"},"doubleside":{"colour":"#ff8000","size":"14","opacity":"0.4","legend": "Both Sizes Cleared"},"priority_3":{"colour":"#42ff65","size":"4","opacity":"1","legend": "Priority 3"},"priority_2":{"colour":"#02e2f2","size":"4","opacity":"1","legend": "Priority 2"},"priority_1":{"colour":"#ff4545","size":"4","opacity":"1","legend": "Priority 1"}};
 	
 	$.each(priorities,function(k,v){
@@ -180,7 +255,7 @@
 			}
 		});
 		thislayer.addTo(map);
-		$('#legend').append('<li><span class="legendbox" style="background:'+v.colour+';opacity:'+v.opacity+'">&nbsp;</span><strong>'+v.legend+'</strong><span id="'+k+'ctl" class="datatoggle" data-layer="'+k+'">hide</span></li>');
+		$('#prioritieslegend').append('<li><span class="legendbox" style="background:'+v.colour+';opacity:'+v.opacity+'">&nbsp;</span><strong>'+v.legend+'</strong><span id="'+k+'ctl" class="datatoggle" data-layer="'+k+'">hide</span></li>');
 		$.ajax({
 			dataType: "json",
 			url: "data/"+k+".json",
@@ -204,6 +279,7 @@
 	$('.datatoggle').click(function(){
 		togglelayers($(this).data('layer'));
 	});
+	togglelayers('centres');
 	function buildcensusdata(){
 		censusdata.averages={};
 		censusdata.totals={};
@@ -214,12 +290,19 @@
 		censusdata.values.afterTaxIncome=[];
 		censusdata.max.afterTaxIncome=0;
 		censusdata.min.afterTaxIncome=0;
+		censusdata.values.density=[];
+		censusdata.max.density=0;
+		censusdata.min.density=0;
 		censusdata.ranges={};
 		censusdata.ranges.afterTaxIncome=[0];
+		censusdata.ranges.density=[0];
 		censusdata.tiers={};
 		censusdata.tiers.afterTaxIncome=0;
+		censusdata.tiers.density=0;
 		var hasAfterTaxIncome=0;
 		$.each(censusdata,function(k,v){
+			censusdata[k].density=Math.ceil(parseInt(v.Population)*(1/parseFloat(v['Area (sq km)'])));
+			censusdata.values.density.push(censusdata[k].density);
 			censusdata[k].percentages={};
 			censusdata[k].percentages.walked={};
 			if(parseInt(v.Data.v_CA16_5792.value)){
@@ -263,12 +346,15 @@
 		censusdata.max.afterTaxIncome=Math.max.apply(Math,censusdata.values.afterTaxIncome);
 		censusdata.min.afterTaxIncome=Math.min.apply(Math,censusdata.values.afterTaxIncome);
 		censusdata.tiers.afterTaxIncome=Math.ceil(censusdata.max.afterTaxIncome/gradient.length);
+		censusdata.max.density=Math.max.apply(Math,censusdata.values.density);
+		censusdata.min.density=Math.min.apply(Math,censusdata.values.density);
+		censusdata.tiers.density=Math.ceil(censusdata.max.density/gradient.length);
 		//calculate tiers for gradients
 		$.each(gradient,function(k,v){
 			if(k){
 				var lastkey=k-1;
-				var thisrange=censusdata.tiers.afterTaxIncome+censusdata.ranges.afterTaxIncome[lastkey];
-				censusdata.ranges.afterTaxIncome.push(thisrange);
+				censusdata.ranges.afterTaxIncome.push(censusdata.tiers.afterTaxIncome+censusdata.ranges.afterTaxIncome[lastkey]);
+				censusdata.ranges.density.push(censusdata.tiers.density+censusdata.ranges.density[lastkey]);
 			}
 		});
 	}
@@ -282,17 +368,24 @@
 					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
 				});
 			break;
-			case"percentages.transit.all":
+			case "percentages.transit.all":
 				$.each(censusdata,function(k,v){
 					var rounded=Math.ceil(Math.round(v.percentages.transit.all*100)/10);
 					var opacity=(Math.round(v.percentages.transit.all*10)/10)*1.75;
 					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
 				});
 			break;
-			case"income.all":
+			case "income.all":
 				$.each(censusdata,function(k,v){
 					var rounded=Math.round(v.Data.v_CA16_4963.value/censusdata.tiers.afterTaxIncome);
-					var opacity=0.8;
+					var opacity=0.6;
+					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
+				});
+			break;
+			case "population.density":
+				$.each(censusdata,function(k,v){
+					var rounded=Math.round(v.density/censusdata.tiers.density);
+					var opacity=0.6;
 					censusareas[v.GeoUID].setStyle({fillColor:gradient[rounded],fillOpacity: opacity});
 				});
 			break;
@@ -307,9 +400,7 @@
 		if(l=="priorities"){
 			if(!prioritytoggle){
 				$.each(layertoggles,function(k,v){
-				console.log(k);
-				console.log(v);
-					if(!v && k!='census'){
+					if(!v && k!='census' && k!='schools' && k!='hospitals'){
 						map.removeLayer(prioritylayers[k]);
 						layertoggles[k] = !layertoggles[k];
 						$('#'+k+'ctl').text('show');
@@ -318,7 +409,7 @@
 				$('#prioritiesctl').text('show');
 			} else {
 				$.each(layertoggles,function(k,v){
-					if(v && k!='census'){
+					if(v && k!='census' && k!='schools' && k!='hospitals'){
 						map.addLayer(prioritylayers[k]);
 						layertoggles[k] = !layertoggles[k];
 						$('#'+k+'ctl').text('hide');
@@ -327,6 +418,27 @@
 				$('#prioritiesctl').text('hide');
 			}
 			prioritytoggle = !prioritytoggle;
+		}else if(l=="centres"){
+			if(!centretoggle){
+				$.each(layertoggles,function(k,v){
+					if(!v && (k=='schools' || k=='hospitals')){
+						map.removeLayer(alllayers[k]);
+						layertoggles[k] = !layertoggles[k];
+						$('#'+k+'ctl').text('show');
+					}
+				});
+				$('#centresctl').text('show');
+			} else {
+				$.each(layertoggles,function(k,v){
+					if(v && (k=='schools' || k=='hospitals')){
+						map.addLayer(alllayers[k]);
+						layertoggles[k] = !layertoggles[k];
+						$('#'+k+'ctl').text('hide');
+					}
+				});
+				$('#centresctl').text('hide');
+			}
+			centretoggle = !centretoggle;
 		}else{
 			if(!layertoggles[l]){
 				map.removeLayer(alllayers[l]);
