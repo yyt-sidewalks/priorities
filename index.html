@@ -122,8 +122,8 @@
 	<h3>Sidewalk Clearing Priorities of the City of St John's, NL</h3>
 	<p id="showabout" class="mobileshow">about</p>
   <p class="mobilehide">This map shows how the City of St. John's prioritizes sidewalk clearing during winter snow storms.</p>
-  <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span><br><ul id="prioritieslegend" class="legend"></ul></p>
-  <p class="mobilehide"><strong>Hospitals & Schools</strong> <span id="centresctl" class="datatoggle" data-layer="centres">hide</span><br><ul id="centreslegend" class="legend">
+  <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span></p><ul id="prioritieslegend" class="legend mobilehide"></ul>
+  <p class="mobilehide"><strong>Hospitals & Schools</strong> <span id="centresctl" class="datatoggle" data-layer="centres">hide</span></p><ul id="centreslegend" class="legend mobilehide">
   <li><img src="img/hospital.png"><strong>Hospitals</strong><span id="hospitalsctl" class="datatoggle" data-layer="hospitals">hide</span></li>
   <li><img src="img/school.png"><strong>Schools</strong><span id="schoolsctl" class="datatoggle" data-layer="schools">hide</span></li>
   </ul></p>
@@ -144,10 +144,10 @@
 	var alllayers={},prioritylayers={};
   $('#showabout').click(function(){
 	  if($('#showabout').hasClass('on')){
-		  $('#showabout').removeClass('on').text('about');
+		  $('#showabout').removeClass('on').text('view selections');
 		  $('.mobilehide').hide();
 	  }else{
-		  $('#showabout').addClass('on').text('hide about');
+		  $('#showabout').addClass('on').text('hide selections');
 		  $('.mobilehide').show();
 	  }
   });
