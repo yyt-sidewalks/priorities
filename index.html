@@ -27,8 +27,8 @@
     width: 100%;}
 	body{
 		overflow: hidden;
-	  height: 1200px;
-	  width: 100%;
+		height: 1200px;
+		width: 100%;
 	}
     #map {position:absolute;height:100%;width: 100%;}
     .leaflet-popup-content {font-size: medium;}
@@ -37,9 +37,15 @@
     .text-muted{font-size:smaller;}
     hr {margin: 10px 0;}
 	.content-area {
-	  overflow: hidden;
-	  height: 1200px;
-	  width: 100%;
+		overflow: hidden;
+		height: 1200px;
+		width: 100%;
+	}
+	.mobilehide{
+		display:none;
+	}
+	.right{
+		float:right;
 	}
 	#formSubmission{
 		display:none;
@@ -59,6 +65,11 @@
 		font-size: 1.2em;
 	}
 	#blurb p {display:none;}
+	#blurb p:after,#blurb ul:after {
+		display: table;
+		content: " ";
+		clear: both;
+	}
 	#blurb #showabout{ display:block; color:#4E84A7;margin-bottom:0.5em;}
 	@media (min-width: 992px) {
 		#blurb{
@@ -75,6 +86,9 @@
 		}
 		#blurb p {display:block;}
 		#blurb #showabout{ display:none;}
+		.mobilehide{
+			display:block;
+		}
 	}
 	.legend{
 		background:#fff;
@@ -120,7 +134,7 @@
   </div>
   <div class="container" id="blurb">
 	<h3>Sidewalk Clearing Priorities of the City of St John's, NL</h3>
-	<p id="showabout" class="mobileshow">about</p>
+	<p id="showabout" class="mobileshow">view selections</p>
   <p class="mobilehide">This map shows how the City of St. John's prioritizes sidewalk clearing during winter snow storms.</p>
   <p class="mobilehide"><strong>City Priorities</strong> <span id="prioritiesctl" class="datatoggle" data-layer="priorities">hide</span></p><ul id="prioritieslegend" class="legend mobilehide"></ul>
   <p class="mobilehide"><strong>Hospitals & Schools</strong> <span id="centresctl" class="datatoggle" data-layer="centres">hide</span></p><ul id="centreslegend" class="legend mobilehide">
@@ -133,7 +147,7 @@
   <option value="percentages.transit.all">Commuters: % take transit</option>
   <option value="income.all">After-Tax Income</option>
   <option value="population.density">Population Density</option></select><br>
-  <button id="resetareas">Reset</button></p>
+  <button id="resetareas" class="right">Reset</button></p>
     </div>
 </div>
   <script>
@@ -142,22 +156,12 @@
 	var prioritytoggle = false,layertoggles={},centretoggle=false;
 	var gradient=["#168900","#2c7c00","#416f00","#576200","#6d5500","#834900","#993c00","#af2f00","#c42200","#da1500"];
 	var alllayers={},prioritylayers={};
-  $('#showabout').click(function(){
-	  if($('#showabout').hasClass('on')){
-		  $('#showabout').removeClass('on').text('view selections');
-		  $('.mobilehide').hide();
-	  }else{
-		  $('#showabout').addClass('on').text('hide selections');
-		  $('.mobilehide').show();
-	  }
-  });
-    var map = L.map('map').setView([47.5670, -52.7292], 14); //Initialize the map
-	
+    var map = L.map('map',{zoomControl: false}).setView([47.5670, -52.7292], 14); //Initialize the map
+	new L.Control.Zoom({ position: 'bottomleft' }).addTo(map);
     //Add a basemap
     var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     	attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
-	
 	$.ajax({
 		dataType: "json",
 		url: "data/demographics.json",
@@ -269,17 +273,28 @@
 		prioritylayers[k]=thislayer;
 		layertoggles[k]=false;
 	});
-	$('#censusdata').change(function(){
-		updateareas($(this).val());
+	$(function() {
+		$('#censusdata').change(function(){
+			updateareas($(this).val());
+		});
+		$('#resetareas').click(function(){
+			$('#censusdata').val('');
+			resetareas();
+		});
+		$('.datatoggle').click(function(){
+			togglelayers($(this).data('layer'));
+		});
+		$('#showabout').click(function(){
+			if($('#showabout').hasClass('on')){
+				$('#showabout').removeClass('on').text('view selections');
+				$('.mobilehide').hide();
+			}else{
+				$('#showabout').addClass('on').text('hide selections');
+				$('.mobilehide').show();
+			}
+		});
+		togglelayers('centres');
 	});
-	$('#resetareas').click(function(){
-		$('#censusdata').val('');
-		resetareas();
-	});
-	$('.datatoggle').click(function(){
-		togglelayers($(this).data('layer'));
-	});
-	togglelayers('centres');
 	function buildcensusdata(){
 		censusdata.averages={};
 		censusdata.totals={};
